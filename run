@@ -1,0 +1,9 @@
+#!/bin/python3
+import os
+import subprocess
+folders = [file for file in os.listdir() if os.path.isdir(file) and file[0].isnumeric()]
+for folder in folders:
+    os.chdir(folder)
+    print(f"Executing file '{folder}/solution.py'")
+    subprocess.run(["python3", f"solution.py"])
+    os.chdir("..")
