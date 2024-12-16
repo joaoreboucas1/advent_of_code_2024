@@ -1,9 +1,26 @@
 #!/bin/python3
 import os
 import subprocess
-folders = [file for file in os.listdir() if os.path.isdir(file) and file[0].isnumeric()]
-for folder in folders:
+import sys
+
+index = None
+if len(sys.argv) == 2: index = int(sys.argv[1])
+
+def run_solution_in_folder(folder, day):
+    name = folder.split("_")[1:]
+    for j, word in enumerate(name): name[j] = word.capitalize()
+    print(f"Day {day}: {' '.join(name)}")
     os.chdir(folder)
-    print(f"Executing file '{folder}/solution.py'")
-    subprocess.run(["python3", f"solution.py"])
+    subprocess.run(["python3", "solution.py"])
     os.chdir("..")
+    print("-----")
+
+folders = [file for file in os.listdir() if os.path.isdir(file) and file[0].isnumeric()]
+print("AOC 2024 Solutions")
+print("-----")
+if index is None:
+    for i, folder in enumerate(sorted(folders)):
+        run_solution_in_folder(folder, day=i+1)
+else:
+    folder = sorted(folders)[index - 1]
+    run_solution_in_folder(folder, day=index)
