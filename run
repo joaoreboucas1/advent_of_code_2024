@@ -12,7 +12,10 @@ def run_solution_in_folder(folder, day):
     for j, word in enumerate(name): name[j] = word.capitalize()
     print(f"Day {day}: {' '.join(name)}")
     os.chdir(folder)
-    subprocess.run(["python3", "solution.py"])
+    if "solution.py" in os.listdir(): subprocess.run(["python3", "solution.py"])
+    elif "solution.cpp" in os.listdir():
+        subprocess.run(["g++", "solution.cpp", "-o", "solution"])
+        subprocess.run(["./solution"])
     os.chdir("..")
     print("-----")
 
