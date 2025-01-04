@@ -14,8 +14,16 @@ def run_solution_in_folder(folder, day):
     os.chdir(folder)
     if "solution.py" in os.listdir(): subprocess.run(["python3", "solution.py"])
     elif "solution.cpp" in os.listdir():
-        subprocess.run(["g++", "solution.cpp", "-o", "solution"])
+        proc = subprocess.run(["g++", "solution.cpp", "-o", "solution"])
+        if proc.returncode != 0: exit(proc.returncode)
         subprocess.run(["./solution"])
+    elif "solution.rs" in os.listdir():
+        proc = subprocess.run(["rustc", "solution.rs", "-o", "solution"])
+        if proc.returncode != 0: exit(proc.returncode)
+        subprocess.run(["./solution"])
+    else:
+        print("ERROR: could not find solution in folder")
+        exit(1)
     os.chdir("..")
     print("-----")
 
