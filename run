@@ -1,49 +1,68 @@
 #!/bin/python3
+"""
+    Script for running my Advent of Code 2024 solutions
+    Author: João Victor Rebouças
+"""
 import os
 import subprocess
 import sys
+from typing import Optional, List
 
-day = None
-if len(sys.argv) == 2: day = int(sys.argv[1])
+day: Optional[int] = None
 
-compilers_to_extensions = {
-    'py': 'python3',
-    'go': 'go',
-    'cpp': 'g++',
-    'rs': 'rustc',
-}
+def find_source(ls: List[str]) -> Optional[str]:
+    for file in ls:
+        if "solution." in file: return file
+    return None
 
-def run_python_solution():
-    subprocess.run(["python3", "solution.py"])
-def run_go_solution():
-    subprocess.run(["go", "run", "solution.go"])
-def run_compiled_solution(extension):
-    compiler = compilers_to_extensions[extension]
-    proc = subprocess.run([compiler, f"solution.{extension}", "-o", "solution"])
-    if proc.returncode != 0: exit(proc.returncode)
-    subprocess.run(["./solution"])
-
-folders = sorted([file for file in os.listdir() if os.path.isdir(file) and file[0].isnumeric()])
-def run_solution_in_folder(folder, day):
-    name = folder.split("_")[1:]
+def run_solution_in_folder(folder: str, day: int):
+    name: list[str] = folder.split("_")[1:]
     for j, word in enumerate(name): name[j] = word.capitalize()
+
     print(f"Day {day}: {' '.join(name)}")
+    
     os.chdir(folder)
-    if "solution.py" in os.listdir(): run_python_solution()
-    elif "solution.go" in os.listdir(): run_go_solution()
-    elif "solution.cpp" in os.listdir(): run_compiled_solution("cpp")
-    elif "solution.rs" in os.listdir(): run_compiled_solution("rs")
-    else:
+    ls: list[str] = os.listdir()
+    
+    source: Optional[str] = find_source(ls)
+    if source is None:
         print(f"ERROR: could not find solution in folder {folder}")
-        exit(1)
+        os.chdir("..")
+        print("-----")
+        return
+    
+    extension: str = source.split(".")[1]
+    if extension == "py":
+        subprocess.run(["python3", "solution.py"])
+    elif extension == "go":
+        subprocess.run(["go", "run", "solution.go"])
+    elif extension == "cpp":
+        proc = subprocess.run(["g++", "solution.cpp", "-o", "solution"])
+        if proc.returncode != 0: exit(proc.returncode)
+        subprocess.run(["./solution"])
+    elif extension == "rs":
+        proc = subprocess.run(["rustc", "solution.rs", "-o", "solution"])
+        if proc.returncode != 0: exit(proc.returncode)
+        subprocess.run(["./solution"])
+    else:
+        print(f"ERROR: Unsupported extension {extension}")
+    
     os.chdir("..")
     print("-----")
+    
+    
+    
 
-print("AOC 2024 Solutions")
-print("-----")
-if day is None:
-    for i, folder in enumerate(folders):
-        run_solution_in_folder(folder, day=i+1)
-else:
-    folder = folders[day - 1]
-    run_solution_in_folder(folder, day=day)
+if __name__ == "__main__":
+    print("AOC 2024 Solutions", end="\n-----\n")
+    
+    if len(sys.argv) == 2: day = int(sys.argv[1])
+
+    folders: List[str] = sorted([file for file in os.listdir() if os.path.isdir(file) and file[0].isnumeric()])
+    
+    if day is None:
+        for i, folder in enumerate(folders):
+            run_solution_in_folder(folder, day=i+1)
+    else:
+        folder = folders[day - 1]
+        run_solution_in_folder(folder, day=day)
