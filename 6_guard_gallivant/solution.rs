@@ -168,7 +168,7 @@ fn part_1(map: &mut Vec<Vec<Cell>>, initial_position: (usize, usize), initial_di
 
 #[allow(dead_code)]
 fn part_2(map: &Vec<Vec<Cell>>, initial_position: (usize, usize), initial_direction: &Direction, width: usize, height: usize) {
-    // NOTE: Very painful code that seems to be working but takes a LOT of time, ~30min.
+    // NOTE: Very painful code that seems to be working but takes a LOT of time, ~40min.
     let mut num_loops = 0;
     for j in 0..height {
         for i in 0..width {
@@ -199,8 +199,6 @@ fn part_2(map: &Vec<Vec<Cell>>, initial_position: (usize, usize), initial_direct
     println!("Number of loops = {num_loops}");
 }
 
-#[allow(unused_variables)]
-#[allow(unused_assignments)]
 fn main() {
     let contents = fs::read_to_string("input.txt")
         .expect("ERROR: could not read input");
