@@ -16,8 +16,10 @@ def find_source(ls: List[str]) -> Optional[str]:
     return None
 
 def run_solution_in_folder(folder: str, day: int):
-    name: list[str] = folder.split("_")[1:]
-    for j, word in enumerate(name): name[j] = word.capitalize()
+    name: list[str] = list(map(
+        str.capitalize,
+        folder.split("_")[1:]
+    ))
 
     print(f"Day {day}: {' '.join(name)}")
     
