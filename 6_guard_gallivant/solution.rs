@@ -1,13 +1,19 @@
 use std::fs;
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
-enum Cell {
+enum CellKind {
     Empty,
     Blocked,
     Us
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+struct Cell {
+    kind: CellKind,
+    visited: bool
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Direction {
     Up,
     Down,
@@ -15,19 +21,24 @@ enum Direction {
     Right
 }
 
+type Map = Vec<Vec<Cell>>;
+
 #[allow(dead_code)]
-fn print_map(map: &Vec<Vec<Cell>>, direction: Direction) {
+fn print_map(map: &Map, direction: Direction) {
     for line in map {
         for cell in line {
-            let c = match cell {
-                Cell::Empty => '.',
-                Cell::Blocked => '#',
-                Cell::Us => {
+            let c = match cell.kind {
+                CellKind::Empty => {
+                    if cell.visited { '.' }
+                    else { '.' }
+                },
+                CellKind::Blocked => '#',
+                CellKind::Us => {
                     match direction {
                         Direction::Up => '^',
                         Direction::Down => 'v',
-                        Direction::Left => '>',
-                        Direction::Right => '<',
+                        Direction::Left => '<',
+                        Direction::Right => '>',
                     }
                 }
             };
@@ -37,163 +48,155 @@ fn print_map(map: &Vec<Vec<Cell>>, direction: Direction) {
     }
 }
 
-fn get_position(map: &Vec<Vec<Cell>>) -> Option<(usize, usize)> {
+fn get_position(map: &Map) -> Option<(usize, usize)> {
     for (i, line) in map.iter().enumerate() {
         for (j, cell) in line.iter().enumerate() {
-            if *cell == Cell::Us { return Some((i, j)) }
+            if cell.kind == CellKind::Us { return Some((i, j)) }
         }
     }
     return None;
 }
 
-fn is_position_within_map(position: (usize, usize), width: usize, height: usize) -> bool {
-    let (j, i) = position;
-    j < width && i < height
+fn restore_map(map: &mut Map, initial_position: (usize, usize)) {
+    if let Some(position) = get_position(map) {
+        let (j, i) = position;
+        map[j][i] = Cell{ kind: CellKind::Empty, visited: true };
+    }
+    let (j, i) = initial_position;
+    map[j][i] = Cell { kind: CellKind::Us, visited: true };
 }
 
-fn evolve(map: &mut Vec<Vec<Cell>>, position: &mut (usize, usize), direction: &mut Direction, width: usize, height: usize) {
-    let (j, i) = *position;
-    match *direction {
+fn evolve(map: &mut Map, position: (usize, usize), direction: Direction, width: usize, height: usize) -> Option<((usize, usize), Direction)> {
+    let (j, i) = position;
+    match direction {
         Direction::Up => {
-            if j == 0 {
-                map[j][i] = Cell::Empty;
-                *position = (usize::MAX, i); // Note that this still gonna be outside the box
-                return;
-            }
-            let facing_line = map.get(j-1).expect("Already handled the case where j = 0");
-            let facing_cell = facing_line.get(i).expect("Unchanged in the movement");
-            match facing_cell {
-                Cell::Empty => {
-                    map[j][i] = Cell::Empty;
-                    map[j-1][i] = Cell::Us;
-                    *position = (j-1, i);
-                    return;
-                },
-                Cell::Blocked => {
-                    *direction = Direction::Right;
-                    return;
-                },
-                _ => {
-                    panic!("Unhandled facing cell during evolution")
+            // Count how many empty positions there are upwards (i.e. j towards zero)
+            let mut dist = 0;
+            for dj in 0..j {
+                let next_cell = &mut map[j - dj - 1][i];
+                match next_cell.kind {
+                    CellKind::Empty => {
+                        dist += 1;
+                        next_cell.visited = true;
+                    } 
+                    _ => break,
                 }
             }
-        },
+            // Update map accordingly
+            map[j][i] = Cell { kind: CellKind::Empty, visited: true };
+            if j - dist == 0 { return None; }
+            map[j - dist][i] = Cell { kind: CellKind::Us, visited: true };
+            return Some(((j - dist, i), Direction::Right));
+        }
         Direction::Down => {
-            if j == height-1 {
-                map[j][i] = Cell::Empty;
-                *position = (j+1, i);
-                return;
-            }
-            let facing_line = map.get(j+1).expect("Already handled the case where j = width");
-            let facing_cell = facing_line.get(i).expect("Unchanged in the movement");
-            match facing_cell {
-                Cell::Empty => {
-                    map[j][i] = Cell::Empty;
-                    map[j+1][i] = Cell::Us;
-                    *position = (j+1, i);
-                    return;
-                },
-                Cell::Blocked => {
-                    *direction = Direction::Left;
-                    return;
-                },
-                _ => {
-                    panic!("Unhandled facing cell during evolution")
+            // Count how many empty positions there are upwards (i.e. j towards zero)
+            let mut dist = 0;
+            for dj in 1..(height-j) {
+                let next_cell = &mut map[j + dj][i];
+                match next_cell.kind {
+                    CellKind::Empty => {
+                        dist += 1;
+                        next_cell.visited = true;
+                    } 
+                    _ => break,
                 }
             }
-        },
+            // Update map accordingly
+            map[j][i] = Cell { kind: CellKind::Empty, visited: true };
+            if j + dist == height-1 { return None; }
+            map[j + dist][i] = Cell { kind: CellKind::Us, visited: true };
+            return Some(((j + dist, i), Direction::Left));
+        }
         Direction::Left => {
-            if i == 0 {
-                map[j][i] = Cell::Empty;
-                *position = (j, usize::MAX);
-                return;
-            }
-            let facing_line = map.get(j).expect("Unchanged in the movement");
-            let facing_cell = facing_line.get(i-1).expect("Already handled the case");
-            match facing_cell {
-                Cell::Empty => {
-                    map[j][i] = Cell::Empty;
-                    map[j][i-1] = Cell::Us;
-                    *position = (j, i-1);
-                    return;
-                },
-                Cell::Blocked => {
-                    *direction = Direction::Up;
-                    return;
-                },
-                _ => {
-                    panic!("Unhandled facing cell during evolution")
+            // Count how many empty positions there are upwards (i.e. j towards zero)
+            let mut dist = 0;
+            for di in 0..i {
+                let next_cell = &mut map[j][i - di - 1];
+                match next_cell.kind {
+                    CellKind::Empty => {
+                        dist += 1;
+                        next_cell.visited = true;
+                    } 
+                    _ => break,
                 }
             }
-        },
+            // Update map accordingly
+            map[j][i] = Cell { kind: CellKind::Empty, visited: true };
+            if i - dist == 0 { return None; }
+            map[j][i - dist] = Cell {kind: CellKind::Us, visited: true };
+            return Some(((j, i - dist), Direction::Up));
+        }
         Direction::Right => {
-            if i == width-1 {
-                map[j][i] = Cell::Empty;
-                *position = (j, width);
-                return;
-            }
-            let facing_line = map.get(j).expect("Unchanged in the movement");
-            let facing_cell = facing_line.get(i+1).expect("Already handled the case");
-            match facing_cell {
-                Cell::Empty => {
-                    map[j][i] = Cell::Empty;
-                    map[j][i+1] = Cell::Us;
-                    *position = (j, i+1);
-                    return;
-                },
-                Cell::Blocked => {
-                    *direction = Direction::Down;
-                    return;
-                },
-                _ => {
-                    panic!("Unhandled facing cell during evolution")
+            // Count how many empty positions there are upwards (i.e. j towards zero)
+            let mut dist = 0;
+            for di in 1..(width-i) {
+                let next_cell = &mut map[j][i + di];
+                match next_cell.kind {
+                    CellKind::Empty => {
+                        dist += 1;
+                        next_cell.visited = true;
+                    } 
+                    _ => break,
                 }
             }
+            // Update map accordingly
+            map[j][i] = Cell { kind: CellKind::Empty, visited: true };
+            if i + dist == width-1 { return None; }
+            map[j][i + dist] = Cell { kind: CellKind::Us, visited: true };
+            return Some(((j, i + dist), Direction::Down));
         }
     }
 }
 
-fn part_1(map: &mut Vec<Vec<Cell>>, initial_position: (usize, usize), initial_direction: &Direction, width: usize, height: usize) {
-    let mut visited_positions: Vec<(usize, usize)> = Vec::new();
+fn part_1(map: &mut Map, initial_position: (usize, usize), initial_direction: Direction, width: usize, height: usize) {
     let mut position = initial_position;
-    let mut direction = initial_direction.clone();
-    visited_positions.push(position);
+    let mut direction = initial_direction;
+    let mut visited = 0;
     loop {
-        evolve(map, &mut position, &mut direction, width, height);
-        if !is_position_within_map(position, width, height) { break };
-        if !visited_positions.contains(&position) { visited_positions.push(position) };
+        let new_status = evolve(map, position, direction, width, height);
+        if let Some((new_position, new_direction)) = new_status {
+            position = new_position;
+            direction = new_direction;
+        } else {
+            // Count how many visited places
+            for line in map {
+                for cell in line {
+                    if cell.visited { visited += 1; }
+                }
+            }
+            break;
+        }
     }
-    println!("Number of visited positions = {}", visited_positions.len());
+    println!("Number of visited positions = {visited}");
 }
 
 #[allow(dead_code)]
-fn part_2(map: &Vec<Vec<Cell>>, initial_position: (usize, usize), initial_direction: &Direction, width: usize, height: usize) {
-    // NOTE: Very painful code that seems to be working but takes a LOT of time, ~40min.
+fn part_2(map: &mut Map, initial_position: (usize, usize), initial_direction: Direction, width: usize, height: usize) {
     let mut num_loops = 0;
     for j in 0..height {
         for i in 0..width {
-            let mut new_map = map.clone();
-            let cell = new_map[j][i];
-            if cell != Cell::Empty { continue };
-            new_map[j][i] = Cell::Blocked;
-            let mut visited_positions: Vec<(usize, usize, Direction)> = Vec::new();
+            let cell = map[j][i];
+            if cell.kind != CellKind::Empty { continue };
+            map[j][i] = Cell{ kind: CellKind::Blocked, visited: false };
+            let mut visited_positions: Vec<((usize, usize), Direction)> = Vec::new();
+            visited_positions.push((initial_position, initial_direction));
             let mut position = initial_position;
-            let mut direction = initial_direction.clone();
-            visited_positions.push((position.0, position.1, direction));
+            let mut direction = initial_direction;
             loop {
-                evolve(&mut new_map, &mut position, &mut direction, width, height);
-                if !is_position_within_map(position, width, height) { 
-                    println!("Got out of map! Block cell ({j},{i})");
-                    break
-                };
-                if !visited_positions.contains(&(position.0, position.1, direction)) {
-                     visited_positions.push((position.0, position.1, direction));
-                } else {
-                    println!("Found loop! Block cell ({j},{i})");
-                    num_loops += 1;
-                    break;
-                };
+                let new_status = evolve(map, position, direction, width, height);
+                if let Some((new_position, new_direction)) = new_status {
+                    position = new_position;
+                    direction = new_direction;
+                    if !visited_positions.contains(&(new_position, new_direction)) {
+                        visited_positions.push((new_position, new_direction))
+                    } else {
+                        num_loops += 1;
+                        break;
+                    }
+                } else { break; }
             }
+            map[j][i] = Cell { kind: CellKind::Empty, visited: false };
+            restore_map(map, initial_position);
         }
     }
     println!("Number of loops = {num_loops}");
@@ -204,13 +207,13 @@ fn main() {
         .expect("ERROR: could not read input");
     
     // Parse into 2D Vec
-    let mut map: Vec<Vec<Cell>> = Vec::new();
+    let mut map: Map = Vec::new();
     let mut line: Vec<Cell> = Vec::new();
     for c in contents.chars() {
         match c {
-            '.' => line.push(Cell::Empty),
-            '#' => line.push(Cell::Blocked),
-            '^' => line.push(Cell::Us),
+            '.' => line.push(Cell { kind:CellKind::Empty, visited: false }),
+            '#' => line.push(Cell { kind:CellKind::Blocked, visited: false }),
+            '^' => line.push(Cell { kind:CellKind::Us, visited: true }),
             '\n' => {
                 map.push(line);
                 line = Vec::new();
@@ -225,9 +228,7 @@ fn main() {
     let initial_direction = Direction::Up;
     let width = map[0].len();
     let height = map.len();
-    part_1(&mut map.clone(), initial_position, &initial_direction, width, height);
-    // part_2(&map, initial_position, &initial_direction, width, height);
-    // NOTE: the part 2 code is painful and it takes something like 40mins to run. I didn't have time to think of anything better thus far.
-    println!("Number of loops = 1482");
-
+    part_1(&mut map, initial_position, initial_direction, width, height);
+    restore_map(&mut map, initial_position);
+    part_2(&mut map, initial_position, initial_direction, width, height);
 }
