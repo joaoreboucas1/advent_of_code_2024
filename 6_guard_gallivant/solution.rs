@@ -1,13 +1,13 @@
 use std::fs;
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum CellKind {
     Empty,
     Blocked,
     Us
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 struct Cell {
     kind: CellKind,
     visited: bool
@@ -29,7 +29,7 @@ fn print_map(map: &Map, direction: Direction) {
         for cell in line {
             let c = match cell.kind {
                 CellKind::Empty => {
-                    if cell.visited { '.' }
+                    if cell.visited { 'X' }
                     else { '.' }
                 },
                 CellKind::Blocked => '#',
@@ -70,7 +70,7 @@ fn evolve(map: &mut Map, position: (usize, usize), direction: Direction, width: 
     let (j, i) = position;
     match direction {
         Direction::Up => {
-            // Count how many empty positions there are upwards (i.e. j towards zero)
+            // Count how many empty positions there are upwards
             let mut dist = 0;
             for dj in 0..j {
                 let next_cell = &mut map[j - dj - 1][i];
@@ -89,7 +89,7 @@ fn evolve(map: &mut Map, position: (usize, usize), direction: Direction, width: 
             return Some(((j - dist, i), Direction::Right));
         }
         Direction::Down => {
-            // Count how many empty positions there are upwards (i.e. j towards zero)
+            // Count how many empty positions there are downwards
             let mut dist = 0;
             for dj in 1..(height-j) {
                 let next_cell = &mut map[j + dj][i];
@@ -108,7 +108,7 @@ fn evolve(map: &mut Map, position: (usize, usize), direction: Direction, width: 
             return Some(((j + dist, i), Direction::Left));
         }
         Direction::Left => {
-            // Count how many empty positions there are upwards (i.e. j towards zero)
+            // Count how many empty positions there are to the left
             let mut dist = 0;
             for di in 0..i {
                 let next_cell = &mut map[j][i - di - 1];
@@ -127,7 +127,7 @@ fn evolve(map: &mut Map, position: (usize, usize), direction: Direction, width: 
             return Some(((j, i - dist), Direction::Up));
         }
         Direction::Right => {
-            // Count how many empty positions there are upwards (i.e. j towards zero)
+            // Count how many empty positions there are to the right
             let mut dist = 0;
             for di in 1..(width-i) {
                 let next_cell = &mut map[j][i + di];
@@ -159,10 +159,8 @@ fn part_1(map: &mut Map, initial_position: (usize, usize), initial_direction: Di
             direction = new_direction;
         } else {
             // Count how many visited places
-            for line in map {
-                for cell in line {
-                    if cell.visited { visited += 1; }
-                }
+            for cell in map.iter().flatten() {
+                if cell.visited { visited += 1; }
             }
             break;
         }
@@ -170,7 +168,6 @@ fn part_1(map: &mut Map, initial_position: (usize, usize), initial_direction: Di
     println!("Number of visited positions = {visited}");
 }
 
-#[allow(dead_code)]
 fn part_2(map: &mut Map, initial_position: (usize, usize), initial_direction: Direction, width: usize, height: usize) {
     let mut num_loops = 0;
     for j in 0..height {
@@ -224,10 +221,10 @@ fn main() {
         }
     }
     map.push(line); // Since input.txt does not end with newline, we have one line left to push into the map
-    let initial_position = get_position(&map).expect("Initial position is valid"); // Initial position
-    let initial_direction = Direction::Up;
     let width = map[0].len();
     let height = map.len();
+    let initial_position = get_position(&map).expect("Initial position is valid"); // Initial position
+    let initial_direction = Direction::Up;
     part_1(&mut map, initial_position, initial_direction, width, height);
     restore_map(&mut map, initial_position);
     part_2(&mut map, initial_position, initial_direction, width, height);
