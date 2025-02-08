@@ -51,9 +51,7 @@ def run_solution_in_folder(folder: str, day: int):
     
     os.chdir("..")
     print("-----")
-    
-    
-    
+
 
 if __name__ == "__main__":
     print("AOC 2024 Solutions", end="\n-----\n")
