@@ -1,6 +1,7 @@
 use std::fs;
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 struct Antenna {
     frequency: char,
 }
