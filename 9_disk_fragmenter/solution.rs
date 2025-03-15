@@ -157,7 +157,7 @@ fn part_2(contents: &String) {
     let mut memory = build_memory(contents);
     let sizes = ids_with_sizes(contents);
     defrag2(&mut memory, sizes);
-    println!("Checksum = {}", checksum(&memory));
+    println!("Checksum without fragmentation = {}", checksum(&memory));
 }
 
 fn main() {
