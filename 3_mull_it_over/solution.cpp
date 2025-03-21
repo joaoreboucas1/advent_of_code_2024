@@ -55,7 +55,7 @@ void part_2()
         if (do_index == std::string::npos) break;
         add_valid_muls(result, input.substr(do_index, dont_index - do_index + 7));
     }
-    printf("Sum of all valid mul operations between dos and don'ts= %d\n", result);
+    printf("Sum of all valid mul operations between dos and don'ts = %d\n", result);
     return;
 }
 

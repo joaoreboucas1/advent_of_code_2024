@@ -9,7 +9,7 @@ fn print_memory(m: &Memory) {
     for block in m {
         if let Some(id) = block {
             print!("[{id}]");
-        } else  {
+        } else {
             print!(".");
         }
     }
